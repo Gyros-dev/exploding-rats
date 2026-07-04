@@ -350,10 +350,27 @@
 }
 
 .hand {
+  /* горизонтальный скролл, когда веер шире экрана */
   display: flex;
-  justify-content: center;
-  padding: 14px 16px 2px;
-  min-height: 128px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 26px 16px 2px; /* запас сверху под подъём выделенной карты */
+  min-height: 150px;
+}
+.hand::-webkit-scrollbar {
+  display: none;
+}
+
+/* margin:auto центрирует веер, пока он уже экрана, и корректно
+   скроллится, когда шире (justify-content: center так не умеет) */
+.handInner {
+  display: flex;
+  margin: 0 auto;
+  min-width: max-content;
+  padding: 0 10px;
 }
 
 .handCard {

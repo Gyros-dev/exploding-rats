@@ -448,31 +448,33 @@ function HandArea() {
     <div className={s.handArea}>
       <div className={s.hand} style={{ '--hand-overlap': `${overlap}px` } as React.CSSProperties}>
         {hand.length === 0 && <div className={s.handEmpty}>Рука пуста — тяни карту</div>}
-        <AnimatePresence>
-          {hand.map((card, i) => {
-            const n = hand.length;
-            const angle = (i - (n - 1) / 2) * Math.min(6, 44 / n);
-            return (
-              <motion.div
-                key={card.id}
-                className={s.handCard}
-                layout
-                initial={{ y: 120, opacity: 0, rotate: 0 }}
-                animate={{ y: 0, opacity: 1, rotate: angle }}
-                exit={{ y: -80, opacity: 0, scale: 0.7 }}
-                transition={{ type: 'spring', damping: 22, stiffness: 260, delay: i * 0.015 }}
-              >
-                <CardFace
-                  type={card.type}
-                  variant={card.variant}
-                  width={cardW}
-                  selected={selected.includes(card.id)}
-                  onClick={() => toggle(card.id)}
-                />
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+        <div className={s.handInner}>
+          <AnimatePresence>
+            {hand.map((card, i) => {
+              const n = hand.length;
+              const angle = (i - (n - 1) / 2) * Math.min(6, 44 / n);
+              return (
+                <motion.div
+                  key={card.id}
+                  className={s.handCard}
+                  layout
+                  initial={{ y: 120, opacity: 0, rotate: 0 }}
+                  animate={{ y: 0, opacity: 1, rotate: angle }}
+                  exit={{ y: -80, opacity: 0, scale: 0.7 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 260, delay: i * 0.015 }}
+                >
+                  <CardFace
+                    type={card.type}
+                    variant={card.variant}
+                    width={cardW}
+                    selected={selected.includes(card.id)}
+                    onClick={() => toggle(card.id)}
+                  />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className={s.actions}>

@@ -5,3 +5,4 @@ dist
 .env
 .env.*
 supabase/.temp
+.claude/
