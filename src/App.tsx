@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useGame, type Screen } from './store/game';
-import { showBackButton } from './telegram/webapp';
+import { getInviteRoomCode, showBackButton } from './telegram/webapp';
 import { GameScreen } from './screens/GameScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
@@ -30,10 +30,12 @@ export default function App() {
   const requestExit = useGame((g) => g.requestExit);
   const checkSave = useGame((g) => g.checkSave);
 
-  // при старте проверяем, есть ли сохранённый бой (Telegram CloudStorage)
+  // при старте проверяем сохранение и мягко открываем экран входа, если приложение
+  // запущено по инвайт-ссылке ?room=XXXX
   useEffect(() => {
     void checkSave();
-  }, [checkSave]);
+    if (getInviteRoomCode() && screen === 'menu') navigate('mp');
+  }, [checkSave, navigate, screen]);
 
   // Telegram BackButton: из игры — диалог «сохранить и выйти?»,
   // с остальных экранов — назад в меню

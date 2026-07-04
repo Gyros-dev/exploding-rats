@@ -59,6 +59,8 @@ interface FxState {
   /** timestamp взрыва — триггер screen shake */
   explosionAt: number;
   explodedPlayer: number | null;
+  /** timestamp перемешивания — триггер анимации колоды */
+  shuffleAt: number;
   /** Вытянутый кринж — показать на весь экран */
   ratDrawn: { card: Card; player: number; at: number } | null;
 }
@@ -128,6 +130,7 @@ const BOT_NAMES = [
 ];
 
 const SAVE_KEY = 'exploding-rats:save';
+const RESULT_AFTER_RAT_DELAY_MS = 1900;
 
 interface GameSave {
   state: GameState;
@@ -142,6 +145,7 @@ let engine: GameEngine | null = null;
 let memories: BotMemory[] = [];
 let token = 0; // инкремент прерывает все активные async-циклы
 let humanPassedNope = false;
+let finishingGame = false;
 
 // --- мультиплеер ---
 let room: Room | null = null;
@@ -187,6 +191,7 @@ export const useGame = create<GameStore>((set, get) => {
         case 'deck-shuffled':
           playSfx('shuffle');
           for (const m of memories) memoryUpdates.deckShuffled(m);
+          set({ fx: { ...get().fx, shuffleAt: Date.now() } });
           break;
         case 'future-seen':
           if (e.player > 0) memoryUpdates.sawFuture(memories[e.player], e.cards);
@@ -215,6 +220,17 @@ export const useGame = create<GameStore>((set, get) => {
           haptic.error();
           for (const m of memories) memoryUpdates.cardDrawn(m);
           set({ fx: { ...get().fx, explosionAt: Date.now(), explodedPlayer: e.player } });
+          // В соло-режиме после смерти человека сразу показываем проигрыш,
+          // не заставляя ждать, пока боты доиграют между собой.
+          if (get().mode === 'solo' && e.player === 0) {
+            if (engine) {
+              engine.state.phase = 'game-over';
+              engine.state.winner = engine.state.players.find((p) => p.alive)?.id ?? null;
+              engine.state.pending = null;
+              engine.state.request = null;
+            }
+            void finishGame(engine?.state.winner ?? -1);
+          }
           break;
         case 'card-stolen':
         case 'card-given':
@@ -243,36 +259,60 @@ export const useGame = create<GameStore>((set, get) => {
   }
 
   async function finishGame(winner: number): Promise<void> {
+    if (finishingGame) return;
+    finishingGame = true;
     token++; // остановить циклы ботов
     const { difficulty, botCount } = get();
     const s = engine!.state;
     const me = s.players[0];
     const won = winner === 0;
+    const totalPlayers = s.players.length;
     // eliminatedOrder: 1 = выбыл первым → место = (всего игроков) − порядок + 1
-    const place = won
-      ? 1
-      : s.players.length - (me.eliminatedOrder ?? 1) + 1;
+    const place = won ? 1 : totalPlayers - (me.eliminatedOrder ?? 1) + 1;
     playSfx(won ? 'win' : 'lose');
     if (won) haptic.success();
+
+    const optimisticResult: GameResult = {
+      won,
+      difficulty,
+      botCount,
+      place,
+      totalPlayers,
+      points: 0,
+      score: 0,
+      wins: 0,
+      games_played: 0,
+      current_streak: 0,
+      best_streak: 0,
+      rank: null,
+      online: false,
+    };
+
+    const showResultAndSubmit = async () => {
+      // Сначала открываем итоговый экран, чтобы его анимация не ждала Supabase.
+      // При поражении этот вызов откладывается, чтобы успела показаться последняя крыса.
+      set({ submitting: true, hasSave: false, result: optimisticResult, screen: 'result' });
+      const submitted = await submitGameResult(won, difficulty, botCount);
+      set({
+        submitting: false,
+        result: {
+          ...submitted,
+          won,
+          difficulty,
+          botCount,
+          place,
+          totalPlayers,
+        },
+      });
+    };
+
     // партия закончена — сохранение больше не актуально
     void storageRemove(SAVE_KEY);
-    set({ submitting: true, hasSave: false });
-    const submitted = await submitGameResult(won, difficulty, botCount);
-    set({
-      submitting: false,
-      result: {
-        ...submitted,
-        won,
-        difficulty,
-        botCount,
-        place,
-        totalPlayers: s.players.length,
-      },
-    });
-    // даём взрыву/фанфарам отыграть, затем экран итогов
-    setTimeout(() => {
-      if (get().screen === 'game') set({ screen: 'result' });
-    }, 1600);
+    if (!won) {
+      window.setTimeout(() => void showResultAndSubmit(), RESULT_AFTER_RAT_DELAY_MS);
+      return;
+    }
+    await showResultAndSubmit();
   }
 
   // ==================== МУЛЬТИПЛЕЕР ====================
@@ -320,29 +360,30 @@ export const useGame = create<GameStore>((set, get) => {
     if (!s) return;
     const me = s.players[mySeat];
     const won = winner === mySeat;
+    const result: GameResult = {
+      won,
+      mp: true,
+      points: 0,
+      score: 0,
+      wins: 0,
+      games_played: 0,
+      current_streak: 0,
+      best_streak: 0,
+      rank: null,
+      online: false,
+      difficulty: get().difficulty,
+      botCount: 0,
+      place: won ? 1 : s.players.length - (me.eliminatedOrder ?? 1) + 1,
+      totalPlayers: s.players.length,
+    };
     playSfx(won ? 'win' : 'lose');
     if (won) haptic.success();
-    set({
-      result: {
-        won,
-        mp: true,
-        points: 0,
-        score: 0,
-        wins: 0,
-        games_played: 0,
-        current_streak: 0,
-        best_streak: 0,
-        rank: null,
-        online: false,
-        difficulty: get().difficulty,
-        botCount: 0,
-        place: won ? 1 : s.players.length - (me.eliminatedOrder ?? 1) + 1,
-        totalPlayers: s.players.length,
-      },
-    });
-    setTimeout(() => {
-      if (get().screen === 'game') set({ screen: 'result' });
-    }, 1600);
+    const showResult = () => set({ screen: 'result', result });
+    if (!won) {
+      window.setTimeout(showResult, RESULT_AFTER_RAT_DELAY_MS);
+      return;
+    }
+    showResult();
   }
 
   /** Хост: применить мутацию, показать эффекты, разослать снапшот */
@@ -545,7 +586,7 @@ export const useGame = create<GameStore>((set, get) => {
           result: null,
           nopeDeadline: null,
           exitPrompt: false,
-          fx: { explosionAt: 0, explodedPlayer: null, ratDrawn: null },
+          fx: { explosionAt: 0, explodedPlayer: null, shuffleAt: 0, ratDrawn: null },
         });
       },
       onAction(msg: MpActionMsg) {
@@ -711,7 +752,7 @@ export const useGame = create<GameStore>((set, get) => {
     difficulty: 'medium',
     botCount: 2,
     nopeDeadline: null,
-    fx: { explosionAt: 0, explodedPlayer: null, ratDrawn: null },
+    fx: { explosionAt: 0, explodedPlayer: null, shuffleAt: 0, ratDrawn: null },
     result: null,
     submitting: false,
     hasSave: false,
@@ -726,6 +767,7 @@ export const useGame = create<GameStore>((set, get) => {
     navigate: (screen) => set({ screen, mpError: null }),
 
     createRoom: async () => {
+      finishingGame = false;
       set({ mpBusy: true, mpError: null });
       try {
         const code = generateRoomCode();
@@ -774,6 +816,7 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     startMpGame: () => {
+      finishingGame = false;
       const st = get();
       if (st.mode !== 'host' || !room) return;
       const members = st.lobbyMembers;
@@ -803,7 +846,7 @@ export const useGame = create<GameStore>((set, get) => {
         result: null,
         nopeDeadline: null,
         exitPrompt: false,
-        fx: { explosionAt: 0, explodedPlayer: null, ratDrawn: null },
+        fx: { explosionAt: 0, explodedPlayer: null, shuffleAt: 0, ratDrawn: null },
       });
       sync();
       room.send(MP_EVENTS.start, {
@@ -814,6 +857,7 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     startGame: (botCount, difficulty) => {
+      finishingGame = false;
       token++;
       // новая партия перечёркивает старое сохранение
       void storageRemove(SAVE_KEY);
@@ -836,7 +880,7 @@ export const useGame = create<GameStore>((set, get) => {
         exitPrompt: false,
         mode: 'solo',
         mySeat: 0,
-        fx: { explosionAt: 0, explodedPlayer: null, ratDrawn: null },
+        fx: { explosionAt: 0, explodedPlayer: null, shuffleAt: 0, ratDrawn: null },
       });
       afterMutation();
       void pump(token);
@@ -888,6 +932,7 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     resumeGame: async () => {
+      finishingGame = false;
       const raw = await storageGet(SAVE_KEY);
       if (!raw) {
         set({ hasSave: false });
@@ -912,7 +957,7 @@ export const useGame = create<GameStore>((set, get) => {
         result: null,
         nopeDeadline: null,
         exitPrompt: false,
-        fx: { explosionAt: 0, explodedPlayer: null, ratDrawn: null },
+        fx: { explosionAt: 0, explodedPlayer: null, shuffleAt: 0, ratDrawn: null },
       });
       afterMutation();
       void pump(token);

@@ -377,3 +377,21 @@
   font-size: var(--fs-micro);
   color: var(--text-dim);
 }
+
+.inviteActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.copyStatus {
+  margin-top: -4px;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .inviteActions {
+    grid-template-columns: 1fr;
+  }
+}

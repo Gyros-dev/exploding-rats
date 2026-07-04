@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useGame } from '../store/game';
 import { myKey } from '../multiplayer/room';
-import { haptic, tg } from '../telegram/webapp';
+import { copyRoomCode, haptic } from '../telegram/webapp';
 import { IconRat, IconSwords } from '../ui/icons';
 import s from '../ui/screens.module.css';
 
@@ -13,24 +14,38 @@ export function LobbyScreen() {
   const leaveRoom = useGame((g) => g.leaveRoom);
   const mpError = useGame((g) => g.mpError);
 
+  const [copyStatus, setCopyStatus] = useState('');
   const canStart = mode === 'host' && lobbyMembers.length >= 2 && lobbyMembers.length <= 5;
   const me = myKey();
 
-  const share = () => {
+  const flashStatus = (text: string) => {
+    setCopyStatus(text);
+    window.setTimeout(() => setCopyStatus(''), 2200);
+  };
+
+  const copyCode = async () => {
+    if (!roomCode) return;
     haptic.light();
-    const text = `Го в «Взрывных крыс»! Код комнаты: ${roomCode}`;
-    if (tg?.switchInlineQuery) tg.switchInlineQuery(text, ['users', 'groups']);
-    else void navigator.clipboard?.writeText(text);
+    const ok = await copyRoomCode(roomCode);
+    if (ok) {
+      haptic.success();
+      flashStatus('Код скопирован');
+    } else {
+      haptic.error();
+      flashStatus(`Код комнаты: ${roomCode}`);
+    }
   };
 
   return (
     <div className={s.screen}>
       <h1 className={s.sectionTitle}>Комната</h1>
 
-      <div className={`glass ${s.roomCode}`} onClick={share} role="button">
+      <div className={`glass ${s.roomCode}`} onClick={copyCode} role="button">
         <span className="tnum">{roomCode}</span>
-        <small>тапни, чтобы поделиться кодом</small>
+        <small>тапни, чтобы скопировать код комнаты</small>
       </div>
+
+      {copyStatus && <div className={s.copyStatus}>{copyStatus}</div>}
 
       <div className="glass" style={{ padding: 8 }}>
         {lobbyMembers.map((m, i) => (

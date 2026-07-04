@@ -175,7 +175,7 @@ export function ResultScreen() {
             : `Место ${result.place} из ${result.totalPlayers}. Кринж оказался смертельным.`}
       </p>
 
-      {result.won && !result.mp && (
+      {result.won && !result.mp && !submitting && (
         <motion.div
           className={`${s.pointsBig} tnum`}
           initial={{ opacity: 0, y: 12 }}
@@ -186,13 +186,19 @@ export function ResultScreen() {
         </motion.div>
       )}
 
+      {submitting && !result.mp && (
+        <div className={s.offlineBadge}>
+          Подсчитываю очки и обновляю таблицу лидеров…
+        </div>
+      )}
+
       {result.mp && (
         <div className={s.offlineBadge}>
           Мультиплеер — очки рейтинга пока не начисляются
         </div>
       )}
 
-      <div className={s.statGrid} style={result.mp ? { display: 'none' } : undefined}>
+      <div className={s.statGrid} style={result.mp || submitting ? { display: 'none' } : undefined}>
         <div className={`glass ${s.stat}`}>
           <b className="tnum">{result.score.toLocaleString('ru-RU')}</b>
           <span>всего очков</span>
@@ -211,7 +217,7 @@ export function ResultScreen() {
         </div>
       </div>
 
-      {result.won && !result.mp && (
+      {result.won && !result.mp && !submitting && (
         <button className="btn btn--ghost" onClick={() => shareResult(result.points, result.rank)}>
           <IconShare /> Поделиться
         </button>

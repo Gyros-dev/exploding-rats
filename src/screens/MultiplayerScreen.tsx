@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isSupabaseConfigured } from '../config';
 import { normalizeRoomCode } from '../multiplayer/protocol';
 import { useGame } from '../store/game';
+import { getInviteRoomCode } from '../telegram/webapp';
 import { BackBar } from '../ui/BackBar';
 import { IconUsers } from '../ui/icons';
 import s from '../ui/screens.module.css';
@@ -12,7 +13,12 @@ export function MultiplayerScreen() {
   const joinRoom = useGame((g) => g.joinRoom);
   const mpBusy = useGame((g) => g.mpBusy);
   const mpError = useGame((g) => g.mpError);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => getInviteRoomCode() ?? '');
+
+  useEffect(() => {
+    const inviteCode = getInviteRoomCode();
+    if (inviteCode) setCode(inviteCode);
+  }, []);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -33,7 +39,7 @@ export function MultiplayerScreen() {
         <IconUsers size={24} /> Мультиплеер
       </h1>
       <p style={{ color: 'var(--text-dim)', margin: 0, fontSize: 'var(--fs-small)' }}>
-        2–5 игроков, включая дуэль 1 на 1. Создай комнату и скинь код друзьям.
+        2–5 игроков, включая дуэль 1 на 1. Создай комнату и скинь друзьям код.
       </p>
 
       <button className="btn" disabled={mpBusy} onClick={() => void createRoom()}>

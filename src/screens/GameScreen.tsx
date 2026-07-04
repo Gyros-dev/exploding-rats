@@ -5,13 +5,32 @@ import type { Card } from '../game/types';
 import { ratsInDeck } from '../ai/bot';
 import { useGame } from '../store/game';
 import { useZoom } from '../store/zoom';
-import { haptic } from '../telegram/webapp';
+import { haptic, isInTelegram } from '../telegram/webapp';
 import { playSfx } from '../audio/sfx';
 import { CardBack, CardFace } from '../ui/CardFace';
 import { IconExit, IconPause, IconRat, IconSave, IconSkull, IconSwords } from '../ui/icons';
 import { Sheet } from '../ui/Sheet';
 import ui from '../ui/components.module.css';
 import s from '../ui/game.module.css';
+
+function useViewportSize() {
+  const [size, setSize] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+
+  useEffect(() => {
+    const update = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
+
+  return size;
+}
 
 export function GameScreen() {
   const snapshot = useGame((g) => g.snapshot);
@@ -34,7 +53,7 @@ export function GameScreen() {
           />
         )}
       </AnimatePresence>
-      <ExitButton />
+      {!isInTelegram && <ExitButton />}
       <HintButton />
       <Opponents />
       <TurnBar />
@@ -237,17 +256,27 @@ function Center() {
   const snapshot = useGame((g) => g.snapshot)!;
   const mySeat = useGame((g) => g.mySeat);
   const humanDraw = useGame((g) => g.humanDraw);
+  const shuffleAt = useGame((g) => g.fx.shuffleAt);
+  const { width, height } = useViewportSize();
   const myTurn = snapshot.currentPlayer === mySeat && snapshot.phase === 'playing';
   const deckSize = snapshot.deck.length;
   const risk = deckSize > 0 ? ratsInDeck(snapshot) / deckSize : 0;
   const topDiscard = snapshot.discard[snapshot.discard.length - 1];
+  const isLandscape = width > height;
+  const tableCardW = Math.round(
+    isLandscape
+      ? Math.min(176, Math.max(126, Math.min(width * 0.22, height * 0.36)))
+      : Math.min(220, Math.max(142, Math.min((width - 64) / 2, height * 0.34))),
+  );
+  const shuffleActive = Date.now() - shuffleAt < 900;
 
   return (
     // крупные карты по центру: --card-w каскадом уходит в CardBack/CardFace
-    <div className={s.center} style={{ '--card-w': '140px' } as React.CSSProperties}>
+    <div className={s.center} style={{ '--card-w': `${tableCardW}px` } as React.CSSProperties}>
       <div className={s.deckWrap}>
         <motion.div
-          className={s.deckStack}
+          key={shuffleAt || 'deck'}
+          className={`${s.deckStack} ${shuffleActive ? s.deckShuffle : ''}`}
           whileTap={myTurn ? { scale: 0.94 } : undefined}
           onClick={() => {
             if (myTurn) {
@@ -344,6 +373,7 @@ function HandArea() {
   const [preview, setPreview] = useState<Card | null>(null);
 
   const mySeat = useGame((g) => g.mySeat);
+  const { width, height } = useViewportSize();
   const me = snapshot.players[mySeat];
   const myTurn = snapshot.currentPlayer === mySeat && snapshot.phase === 'playing';
   const hand = me.hand;
@@ -406,12 +436,17 @@ function HandArea() {
   };
 
   const opponents = snapshot.players.filter((p) => p.id !== mySeat && p.alive);
-  // веер должен помещаться в узкий вьюпорт: чем больше карт, тем уже каждая
-  const cardW = hand.length > 5 ? Math.max(56, 88 - (hand.length - 5) * 7) : 88;
+  // веер должен помещаться в любой вьюпорт, но карты стали чуть крупнее.
+  const overlap = hand.length > 7 ? 18 : hand.length > 5 ? 16 : 14;
+  const maxHandW = Math.min(width - 28, 760);
+  const desired = height < 430 ? 82 : 104;
+  const cardW = hand.length
+    ? Math.round(Math.min(desired, Math.max(64, (maxHandW + (hand.length - 1) * overlap * 2) / hand.length)))
+    : desired;
 
   return (
     <div className={s.handArea}>
-      <div className={s.hand}>
+      <div className={s.hand} style={{ '--hand-overlap': `${overlap}px` } as React.CSSProperties}>
         {hand.length === 0 && <div className={s.handEmpty}>Рука пуста — тяни карту</div>}
         <AnimatePresence>
           {hand.map((card, i) => {

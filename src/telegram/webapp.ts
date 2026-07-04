@@ -169,6 +169,100 @@ export function showMainButton(text: string, onClick: () => void): () => void {
 
 // ---------- Шэринг ----------
 
+
+export function inviteUrl(roomCode: string): string {
+  const url = new URL(window.location.href);
+  url.searchParams.set('room', roomCode);
+  return url.toString();
+}
+
+export function getInviteRoomCode(): string | null {
+  const fromQuery = new URLSearchParams(window.location.search).get('room');
+  if (!fromQuery) return null;
+  const code = fromQuery.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+  return code.length === 4 ? code : null;
+}
+
+type RoomInviteShareResult = 'telegram' | 'native' | 'copied' | 'failed';
+
+export function roomInviteText(roomCode: string): string {
+  return `Код комнаты во «Взрывных крысах»: ${roomCode.toUpperCase()}`;
+}
+
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // В Telegram/iOS Clipboard API часто падает, поэтому ниже есть старый fallback.
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function copyRoomCode(roomCode: string): Promise<boolean> {
+  return copyText(roomCode.toUpperCase());
+}
+
+export async function shareRoomInvite(roomCode: string): Promise<RoomInviteShareResult> {
+  const code = roomCode.toUpperCase();
+  const text = roomInviteText(code);
+
+  // Сначала копируем именно код: если пользователь отменит пересылку, код всё равно уже в буфере.
+  const copied = await copyRoomCode(code);
+
+  // switchInlineQuery работает только если у бота включён inline mode. Для обычного бота
+  // надёжнее открыть стандартное окно пересылки Telegram с текстом без инвайт-ссылки.
+  const telegramShareUrl = `https://t.me/share/url?text=${encodeURIComponent(text)}`;
+  if (tg?.openTelegramLink) {
+    try {
+      tg.openTelegramLink(telegramShareUrl);
+      return 'telegram';
+    } catch {
+      // пойдём в обычные fallback-и
+    }
+  }
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Взрывные крысы', text });
+      return 'native';
+    } catch {
+      return copied ? 'copied' : 'failed';
+    }
+  }
+
+  if (!copied) {
+    try {
+      window.open(telegramShareUrl, '_blank', 'noopener,noreferrer');
+      return 'telegram';
+    } catch {
+      return 'failed';
+    }
+  }
+
+  return 'copied';
+}
+
 export function shareResult(points: number, rank: number | null): void {
   const text = `Я выжил во «Взрывных крысах» и заработал ${points} очков${rank ? ` (место #${rank})` : ''}! 🐀💥 Сможешь лучше?`;
   if (tg?.switchInlineQuery) {
