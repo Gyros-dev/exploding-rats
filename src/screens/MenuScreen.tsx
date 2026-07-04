@@ -27,9 +27,9 @@ export function MenuScreen() {
         >
           <CardBack width={132} />
         </motion.div>
-        <h1 className={s.title}>Взрывные крысы</h1>
+        <h1 className={s.title}>Крысиная возня</h1>
         <p className={s.subtitle}>
-          Привет, {user.first_name}! Не словь смертельный кринж — останься последней крысой.
+          Привет, {user.first_name}! Не слови смертельный кринж — останься последней крысой.
         </p>
       </motion.div>
 
