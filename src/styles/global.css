@@ -1,0 +1,104 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* без горизонтального скролла; экраны скроллятся сами */
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Фирменный паттерн-фон мини-аппа. В тёмной теме — в полную силу,
+   в светлой — едва заметный, чтобы не спорить со светлым UI */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url('../assets/bg.webp') center / cover no-repeat;
+  opacity: 0.06;
+  pointer-events: none;
+}
+:root[data-theme='dark'] body::before {
+  opacity: 1;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+/* Первичная кнопка */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: var(--r-m);
+  font-size: 17px;
+  font-weight: 600;
+  /* цвет кнопок выбирается в настройках (--accent) */
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-panel);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.btn--ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--stroke);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: none;
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Числа лидерборда и счётчиков */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Frosted glass панель */
+.glass {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-panel);
+}

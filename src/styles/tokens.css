@@ -1,0 +1,81 @@
+/*
+ * Дизайн-токены «Взрывных крыс».
+ * Гибрид: iOS-premium чистота + игривый огонь «взрывной» темы.
+ */
+:root {
+  /* Палитра игры */
+  --fire: #ff6a1a;
+  --fire-deep: #d94f00;
+  --rat-red: #e63329;
+  --coal: #141414;
+  --cream: #fff7ee;
+
+  /* Системные iOS-акценты */
+  --ios-blue: #0a84ff;
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --danger: #ff453a;
+
+  /* Типографика */
+  --font: -apple-system, 'SF Pro', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --fs-hero: 34px;
+  --fs-title: 24px;
+  --fs-body: 16px;
+  --fs-small: 13px;
+  --fs-micro: 11px;
+
+  /* Скругления по уровням */
+  --r-s: 12px;
+  --r-m: 16px;
+  --r-l: 20px;
+  --r-xl: 28px;
+
+  /* Мягкие многослойные тени */
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.14),
+    0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-panel:
+    0 1px 1px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-pop:
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3);
+
+  /* Стекло */
+  --glass-blur: blur(18px) saturate(1.4);
+
+  /* Безопасные зоны */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Карты */
+  --card-ratio: 744 / 1039; /* пропорции покерной карты */
+  --card-w: 88px;
+}
+
+/* Светлая тема (по умолчанию) */
+:root,
+:root[data-theme='light'] {
+  --bg: var(--tg-bg, var(--cream));
+  --bg-elevated: #ffffff;
+  --text: var(--tg-text, #1c1c1e);
+  --text-dim: var(--tg-hint, #8e8e93);
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-solid: #ffffff;
+  --stroke: rgba(20, 20, 20, 0.08);
+  --accent: var(--fire);
+  --table-felt: radial-gradient(120% 90% at 50% 0%, #3a3f47 0%, #24272c 55%, #17181b 100%);
+}
+
+:root[data-theme='dark'] {
+  --bg: var(--tg-bg, #101012);
+  --bg-elevated: #1c1c1f;
+  --text: var(--tg-text, #f2f2f7);
+  --text-dim: var(--tg-hint, #98989f);
+  --surface: rgba(30, 30, 34, 0.72);
+  --surface-solid: #1e1e22;
+  --stroke: rgba(255, 255, 255, 0.1);
+  --accent: var(--fire);
+  --table-felt: radial-gradient(120% 90% at 50% 0%, #2c2f35 0%, #1a1c20 55%, #0d0e10 100%);
+}
