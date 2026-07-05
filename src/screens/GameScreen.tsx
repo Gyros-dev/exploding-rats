@@ -443,6 +443,10 @@ function HandArea() {
   const cardW = hand.length
     ? Math.round(Math.min(desired, Math.max(64, (maxHandW + (hand.length - 1) * overlap * 2) / hand.length)))
     : desired;
+  // если веер шире экрана и уходит в скролл — раскладываем карты ровно:
+  // наклонённые углы торчали за края скролл-контейнера и обрезались
+  const fanW = hand.length ? hand.length * cardW - (hand.length - 1) * overlap * 2 : 0;
+  const scrollable = fanW > maxHandW;
 
   return (
     <div className={s.handArea}>
@@ -452,7 +456,7 @@ function HandArea() {
           <AnimatePresence>
             {hand.map((card, i) => {
               const n = hand.length;
-              const angle = (i - (n - 1) / 2) * Math.min(6, 44 / n);
+              const angle = scrollable ? 0 : (i - (n - 1) / 2) * Math.min(6, 44 / n);
               return (
                 <motion.div
                   key={card.id}

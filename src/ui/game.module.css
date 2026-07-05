@@ -357,7 +357,9 @@
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 26px 16px 2px; /* запас сверху под подъём выделенной карты */
+  /* запас сверху под подъём выделенной карты, снизу — под наклон крайних
+     карт веера (их углы ныряли ниже базовой линии и обрезались) */
+  padding: 26px 16px 18px;
   min-height: 150px;
 }
 .hand::-webkit-scrollbar {
@@ -368,9 +370,10 @@
    скроллится, когда шире (justify-content: center так не умеет) */
 .handInner {
   display: flex;
+  align-items: flex-start;
   margin: 0 auto;
   min-width: max-content;
-  padding: 0 10px;
+  padding: 0 16px;
 }
 
 .handCard {

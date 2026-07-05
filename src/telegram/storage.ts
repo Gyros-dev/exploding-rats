@@ -19,12 +19,23 @@ const cloud =
     ? tg.CloudStorage
     : null;
 
+/**
+ * КРИТИЧНО: Telegram CloudStorage принимает ключи только из [A-Za-z0-9_-].
+ * Наши ключи содержат «:» (exploding-rats:save) и «.» (чанки key.0) —
+ * без санитизации ВСЕ облачные записи молча падали, данные жили только
+ * в localStorage вебвью (который Telegram может очищать) и «терялись».
+ * Локальные ключи не трогаем — старые сохранения продолжают читаться.
+ */
+function cloudKey(key: string): string {
+  return key.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
 // ---------- примитивы: один ключ ----------
 
 function cloudGetRaw(key: string): Promise<string | null> {
   return new Promise((resolve) => {
     try {
-      cloud!.getItem(key, (err, value) =>
+      cloud!.getItem(cloudKey(key), (err, value) =>
         resolve(err || value === undefined || value === '' ? null : value),
       );
     } catch {
@@ -36,7 +47,7 @@ function cloudGetRaw(key: string): Promise<string | null> {
 function cloudSetRaw(key: string, value: string): Promise<boolean> {
   return new Promise((resolve) => {
     try {
-      cloud!.setItem(key, value, (err, ok) => resolve(!err && !!ok));
+      cloud!.setItem(cloudKey(key), value, (err, ok) => resolve(!err && !!ok));
     } catch {
       resolve(false);
     }
@@ -46,7 +57,7 @@ function cloudSetRaw(key: string, value: string): Promise<boolean> {
 function cloudRemoveRaw(key: string): Promise<void> {
   return new Promise((resolve) => {
     try {
-      cloud!.removeItem(key, () => resolve());
+      cloud!.removeItem(cloudKey(key), () => resolve());
     } catch {
       resolve();
     }
