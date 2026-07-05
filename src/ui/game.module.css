@@ -357,23 +357,23 @@
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  /* запас сверху под подъём выделенной карты, снизу — под наклон крайних
-     карт веера (их углы ныряли ниже базовой линии и обрезались) */
-  padding: 26px 16px 18px;
-  min-height: 150px;
+  /* запасы под веер: наклон крайних карт до ~22° выносит углы на ~25px
+     за слот по вертикали, плюс подъём выделенной карты сверху */
+  padding: 32px 16px 26px;
+  min-height: 170px;
 }
 .hand::-webkit-scrollbar {
   display: none;
 }
 
 /* margin:auto центрирует веер, пока он уже экрана, и корректно
-   скроллится, когда шире (justify-content: center так не умеет) */
+   скроллится, когда шире (justify-content: center так не умеет).
+   Боковые отступы — под горизонтальный выступ наклонённых крайних карт */
 .handInner {
   display: flex;
-  align-items: flex-start;
   margin: 0 auto;
   min-width: max-content;
-  padding: 0 16px;
+  padding: 0 28px;
 }
 
 .handCard {
