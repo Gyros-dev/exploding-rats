@@ -439,9 +439,10 @@ function HandArea() {
   // веер должен помещаться в любой вьюпорт, но карты стали чуть крупнее.
   const overlap = hand.length > 7 ? 18 : hand.length > 5 ? 16 : 14;
   const maxHandW = Math.min(width - 28, 760);
-  const desired = height < 430 ? 82 : 104;
+  // карты в руке крупные: при переполнении веер просто уходит в скролл
+  const desired = height < 430 ? 96 : 124;
   const cardW = hand.length
-    ? Math.round(Math.min(desired, Math.max(64, (maxHandW + (hand.length - 1) * overlap * 2) / hand.length)))
+    ? Math.round(Math.min(desired, Math.max(84, (maxHandW + (hand.length - 1) * overlap * 2) / hand.length)))
     : desired;
 
   return (
