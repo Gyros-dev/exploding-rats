@@ -112,6 +112,32 @@ describe('Telegram CloudStorage', () => {
     expect(cloud.store.size).toBe(0);
     expect(await s.storageGet(SAVE_KEY)).toBeNull();
   });
+
+  it('не зависает, если клиент не вызывает callback (регрессия «Сохранить и выйти»)', async () => {
+    // сломанный CloudStorage: методы существуют, но callback никогда не приходит
+    const deadCloud = {
+      store: new Map<string, string>(),
+      setItem() {}, // намеренно молчит
+      getItem() {},
+      removeItem() {},
+      getItems() {},
+      removeItems() {},
+      getKeys() {},
+    } as unknown as CloudMock;
+    const s = await loadStorage(deadCloud);
+
+    vi.useFakeTimers();
+    try {
+      const p = s.storageSet(SAVE_KEY, 'value-X');
+      // локальная копия записана СИНХРОННО — данные не потеряны
+      expect(localStorage.getItem(SAVE_KEY)).toBe('value-X');
+      // промис не висит вечно: резолвится по внутреннему таймауту
+      await vi.advanceTimersByTimeAsync(4100);
+      await expect(p).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('localStorage fallback (вне Telegram)', () => {

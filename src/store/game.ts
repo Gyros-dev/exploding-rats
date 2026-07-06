@@ -920,8 +920,10 @@ export const useGame = create<GameStore>((set, get) => {
         botCount: get().botCount,
         savedAt: Date.now(),
       };
-      await storageSet(SAVE_KEY, JSON.stringify(save));
+      const payload = JSON.stringify(save);
       engine = null;
+      // экран переключаем СРАЗУ — реакция кнопки не должна ждать сеть/облако.
+      // storageSet синхронно пишет localStorage, облако досохраняется в фоне.
       set({
         screen: 'menu',
         snapshot: null,
@@ -929,6 +931,7 @@ export const useGame = create<GameStore>((set, get) => {
         exitPrompt: false,
         hasSave: true,
       });
+      void storageSet(SAVE_KEY, payload);
     },
 
     resumeGame: async () => {

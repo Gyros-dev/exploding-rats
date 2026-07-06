@@ -30,38 +30,53 @@ function cloudKey(key: string): string {
   return key.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
+/**
+ * КРИТИЧНО: некоторые клиенты Telegram не вызывают callback CloudStorage
+ * (метод не поддержан / игнорируется) — без страховки промис висит вечно,
+ * и любое `await storage*` замораживает UI (кнопка «Сохранить и выйти»
+ * не срабатывала). Таймаут гарантирует, что промис всегда завершится;
+ * локальная копия к этому моменту уже записана синхронно, данные целы.
+ */
+const CLOUD_TIMEOUT = 4000;
+
+function cloudCall<T>(fallback: T, run: (settle: (v: T) => void) => void): Promise<T> {
+  return new Promise((resolve) => {
+    let done = false;
+    const settle = (v: T) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(v);
+    };
+    const timer = setTimeout(() => settle(fallback), CLOUD_TIMEOUT);
+    try {
+      run(settle);
+    } catch {
+      settle(fallback);
+    }
+  });
+}
+
 // ---------- примитивы: один ключ ----------
 
 function cloudGetRaw(key: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    try {
-      cloud!.getItem(cloudKey(key), (err, value) =>
-        resolve(err || value === undefined || value === '' ? null : value),
-      );
-    } catch {
-      resolve(null);
-    }
-  });
+  return cloudCall<string | null>(null, (settle) =>
+    cloud!.getItem(cloudKey(key), (err, value) =>
+      settle(err || value === undefined || value === '' ? null : value),
+    ),
+  );
 }
 
 function cloudSetRaw(key: string, value: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    try {
-      cloud!.setItem(cloudKey(key), value, (err, ok) => resolve(!err && !!ok));
-    } catch {
-      resolve(false);
-    }
-  });
+  return cloudCall(false, (settle) =>
+    cloud!.setItem(cloudKey(key), value, (err, ok) => settle(!err && !!ok)),
+  );
 }
 
 function cloudRemoveRaw(key: string): Promise<void> {
-  return new Promise((resolve) => {
-    try {
-      cloud!.removeItem(cloudKey(key), () => resolve());
-    } catch {
-      resolve();
-    }
-  });
+  return cloudCall<void>(undefined, (settle) =>
+    cloud!.removeItem(cloudKey(key), () => settle(undefined)),
+  );
 }
 
 function localGet(key: string): string | null {
